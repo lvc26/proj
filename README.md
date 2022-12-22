@@ -26,4 +26,4 @@
 
 
 Приятного просмотра, с любовью Алиса и Лена ❤️
-Dare with us✨
+Dare to shine with us✨
