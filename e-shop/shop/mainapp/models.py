@@ -9,25 +9,41 @@ from django.urls import reverse
 from django.utils import timezone
 from io import BytesIO
 
+'''C помощью этой команды, мы говорим django, что хотим использовать именно того пользователя, который указан в settings_AUTH_USER_MODEL'''
 User = get_user_model()
 
 
 def get_models_for_count(*model_names):
+    '''
+    Функция принимает переменное количество аргументов и возвращает список объектов `Count`, по одному для каждого аргумента
+    :возвращает: список объектов Count.
+
+    '''
     return [models.Count(model_name) for model_name in model_names]
 
 
 def get_product_url(obj, viewname):
+    '''
+    
+   Функция принимает объект и имя представления и возвращает URL страницы сведений об объекте
+ 
+   :параметр obj: Объект, для которого вы хотите получить URL-адрес 
+   :param viewname: имя представления, которое вы хотите изменить
+   :возвращает: URL
+   
+    '''
     ct_model = obj.__class__._meta.model_name
     return reverse(viewname, kwargs={'ct_model': ct_model, 'slug': obj.slug})
 
 
-# It returns the latest 5 products of each model passed to it,
-# and if a model name is passed to it as a keyword argument, it returns the products of that model
-# first
 class LatestProductsManager:
 
     @staticmethod
     def get_products_for_main_page(*args, **kwargs):
+        '''
+        Функция возвращает список объектов заданных моделей, отсортированных по названию модели
+        :возвращает: список объектов разных типов.
+        '''
         with_respect_to = kwargs.get('with_respect_to')
         products = []
         ct_models = ContentType.objects.filter(model__in=args)
@@ -44,16 +60,14 @@ class LatestProductsManager:
         return products
 
 
-# LatestProducts is a class that has a manager called objects.
+
 class LatestProducts:
 
     objects = LatestProductsManager()
 
 
 
-# This class is a subclass of the default manager for the Category model, and it overrides the
-# get_queryset() method to return a queryset that has been annotated with the number of dresses and
-# skirts in each category.
+# Класс, который используется для управления категориями.
 class CategoryManager(models.Manager):
 
     CATEGORY_NAME_COUNT_NAME = {
@@ -62,8 +76,19 @@ class CategoryManager(models.Manager):
     }
 
     def get_queryset(self):
+        '''
+        Функция возвращает набор запросов суперкласса.
+        :return: Возвращается набор запросов.
+
+        '''
         return super().get_queryset()
 
+      '''
+
+    Функция получает категории для левой боковой панели и аннотирует их количеством платьев и юбок в каждой категории
+    :возвращает: список словарей. 
+    
+      '''
     def get_categories_for_left_sidebar(self):
         models = get_models_for_count('dress', 'skirt')
         qs = list(self.get_queryset().annotate(*models))
@@ -74,11 +99,17 @@ class CategoryManager(models.Manager):
         return data
 
 
-# The Category class is a subclass of models.Model, which means it inherits all the properties of the
-# Model class.
-# The Category class has a name and a slug field, and a custom manager called objects.
-# The __str__ method returns the name of the category.
-# The get_absolute_url method returns the URL of the category
+''' 
+Класс Category является подклассом класса Model. 
+Класс Category имеет атрибут name, атрибут slug и атрибут objects.
+: name - название категории (строковое поле)
+: slug - алиас продукта или по-другому его URL.
+: objects - менеджер категорий.
+Класс Category имеет метод __str__, который возвращает атрибут name.
+Класс Category имеет метод get_absolute_url, который возвращает URL.
+URL-адрес генерируется обратной функцией, которой передается представление category_detail и slug
+
+'''
 class Category(models.Model):
 
     name = models.CharField(max_length=255, verbose_name='Имя категории')
@@ -92,10 +123,16 @@ class Category(models.Model):
         return reverse('category_detail', kwargs={'slug': self.slug})
 
 
-# "Product is an abstract model that has a category, title, slug, image, description, and price."
-# The class Meta: abstract = True line tells Django that this model is an abstract model. This means
-# that it won't be used to create any database table. Instead, when it's used as a base class for
-# other models, its fields will be added to those of the child class
+''' 
+Класс продукта - это абстрактный класс, который определяет поля, общие для всех продуктов
+: category - Категория продукта.  ForeignKey - это отношение "многие к одному": продукт относится к одной категории, а категория содержит несколько продуктов
+: title - название продукта
+: slug - URL продукта
+: image - изображение
+: description - описание товара
+: price - стоимость
+
+'''
 class Product(models.Model):
 
     class Meta:
@@ -112,9 +149,17 @@ class Product(models.Model):
         return self.title
 
     def get_model_name(self):
+        '''
+        Возвращает имя класса
+
+        '''
         return self.__class__.__name__.lower()
 
-
+        """
+        
+        Он берет изображение, преобразует его в RGB, изменяет его размер, сохраняет его в filestream, а затем сохраняет filestream в поле image
+        
+        """
     def save(self, *args, **kwargs):
         image = self.image
         img = Image.open(image)
@@ -131,8 +176,7 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
 
-# The Dress class inherits from the Product class, and adds the following fields: style, structure,
-# cut, silhouette, color, and length
+'''Платье - наш продукт, который имеет стиль, структуру, крой, силуэт, цвет и длину.'''
 class Dress(Product):
 
     style = models.CharField(max_length=255, verbose_name='Фасон')
@@ -143,13 +187,23 @@ class Dress(Product):
     length = models.CharField(max_length=255, verbose_name='Длина')
 
     def __str__(self):
+        '''
+        Функция __str__ - это специальная функция, которая вызывается, когда вы вызываете str() для объекта. 
+        Функция __str__ должна возвращать строковое представление объекта
+        :возвращает: название категории и заголовок сообщения.
+        '''
         return "{} : {}".format(self.category.name, self.title)
 
     def get_absolute_url(self):
+        '''
+        Функция возвращает URL страницы сведений о продукте для экземпляра продукта
+        :возвращает: Возвращается представление product_detail.
+        
+        '''
         return get_product_url(self, 'product_detail')
 
 
-# Skirt is a Product that has a style, structure, cut, silhouette, landing, and length.
+''' Юбка - наш продукт, который имеет стиль, структуру, крой, силуэт, посадку и длину.'''
 class Skirt(Product):
 
     style = models.CharField(max_length=255, verbose_name='Фасон')
@@ -161,14 +215,23 @@ class Skirt(Product):
 
 
     def __str__(self):
+        '''
+        Функция __str__ - это специальная функция, которая вызывается, когда вы вызываете str() для объекта. 
+        Функция __str__ должна возвращать строковое представление объекта
+        :возвращает: название категории и заголовок сообщения.
+
+        '''
         return "{} : {}".format(self.category.name, self.title)
 
     def get_absolute_url(self):
+        '''
+        Функция возвращает URL страницы сведений о продукте для экземпляра продукта
+       :возвращает: Представление product_detail.
+        '''
         return get_product_url(self, 'product_detail')
 
 
-# "A CartProduct is a product that is in a cart."
-# The CartProduct class is a generic foreign key. This means that it can be any type of product
+'''Товар в корзине - это товар, который находится в корзине.'''
 class CartProduct(models.Model):
 
     user = models.ForeignKey('Customer', verbose_name='Покупатель', on_delete=models.CASCADE)
@@ -180,14 +243,23 @@ class CartProduct(models.Model):
     final_price = models.DecimalField(max_digits=9, decimal_places=2, verbose_name='Общая цена')
 
     def __str__(self):
+        '''
+        Метод __str__ вызывается, когда вы вызываете str() для объекта.
+        :возвращает: Название продукта
+
+        '''
         return "Продукт: {} (для корзины)".format(self.content_object.title)
 
     def save(self, *args, **kwargs):
+        '''
+        Функция принимает количество товара и умножает его на цену товара
+
+        '''
         self.final_price = self.qty * self.content_object.price
         super().save(*args, **kwargs)
 
 
-# The Cart class is a model that represents a shopping cart
+'''Корзина позволяет пользователям выбирать нужные продукты и временно хранить их'''
 class Cart(models.Model):
 
     owner = models.ForeignKey('Customer', null=True, verbose_name='Владелец', on_delete=models.CASCADE)
@@ -198,11 +270,20 @@ class Cart(models.Model):
     for_anonymous_user = models.BooleanField(default=False)
 
     def __str__(self):
+        """
+        Функция возвращает индентификатор объекта.
+        
+        """
         return str(self.id)
 
+    
+''' Клиент, который использует магазин. 
+    :user - пользователь 
+    :phone - телефон
+    :address - адресс
+    :orders - заказы покупателя. ManyToManyField - отношение многие ко многим. То есть у покупателя может быть много заказов, а у заказа может быть много покупателей
+'''
 
-# The Customer class is a model that has a one-to-one relationship with the User class, 
-# and a many-to-many relationship with the Order class.
 class Customer(models.Model):
 
     user = models.ForeignKey(User, verbose_name='Пользователь', on_delete=models.CASCADE)
@@ -211,10 +292,26 @@ class Customer(models.Model):
     orders = models.ManyToManyField('Order', verbose_name='Заказы покупателя', related_name='related_order')
 
     def __str__(self):
+      """
+      Метод __str__ должен возвращать строковое представление объекта
+      :возвращает: Покупатель: Иван Иванов
+      
+      """
         return "Покупатель: {} {}".format(self.user.first_name, self.user.last_name)
 
 
-# It creates a class called Order, which is a model.
+''' Класс Заказ:
+    :customer - покупатель
+    :first_name - имя покупателя
+    :last_name - фамилия покупателя
+    :phone - телефон
+    :cart - корзина
+    :address - адресс
+    :status - статус закааза 
+    :comment - комментарий к заказу
+    :created_at - дата создания
+    :order_date - дата получения
+'''
 class Order(models.Model):
 
     STATUS_NEW = 'new'
