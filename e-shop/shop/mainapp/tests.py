@@ -39,6 +39,10 @@ class ShopTestCases(TestCase):
 
 
     def test_add_to_cart(self):
+        """
+        Функция добавляет товар в корзину, пересчитывает корзину, а затем утверждает, что товар находится в
+        корзине, что в корзине есть один товар и что окончательная цена составляет 50000,00.
+        """
         self.cart.products.add(self.cart_product)
         recalc_cart(self.cart)
         self.assertIn(self.cart_product, self.cart.products.all())
@@ -47,6 +51,9 @@ class ShopTestCases(TestCase):
 
 
     def test_response_from_add_to_cart_view(self):
+        """
+        Мы тестируем, что ответ из представления "AddToCart" является перенаправлением на страницу корзины.
+        """
         factory = RequestFactory()
         request = factory.get('')
         request.user = self.user
@@ -56,6 +63,11 @@ class ShopTestCases(TestCase):
 
 
     def test_mock_homepage(self):
+        """
+        Я собираюсь имитировать метод get класса BaseView, и я собираюсь вернуть макет объекта
+        с кодом состояния 444. Затем я собираюсь вызвать класс BaseView как view, и я буду
+        утверждать, что код состояния ответа равен 444.
+        """
         mock_data = mock.Mock(status_code=444)
         with mock.patch('mainapp.views.BaseView.get', return_value=mock_data) as mock_data_:
             factory = RequestFactory()
@@ -63,3 +75,4 @@ class ShopTestCases(TestCase):
             request.user=self.user
             response = BaseView.as_view()(request)
             self.assertEqual(response.status_code, 444)
+
